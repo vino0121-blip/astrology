@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "126954569240",
+    "project_id": "hoshimeguri-6f8ff",
+    "storage_bucket": "hoshimeguri-6f8ff.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:126954569240:android:47992270e2e768a63bcd6d",
+        "android_client_info": {
+          "package_name": "com.studioalveare.hoshimeguri"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCBQBb0zWZWJZit5OnZrHsQx_iElsMUTMg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

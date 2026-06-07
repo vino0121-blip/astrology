@@ -1,0 +1,336 @@
+# AdMob 統合手順
+
+カレンダー画面の `_AdBannerPlaceholder` を本物のバナー広告に差し替える手順。
+3段階に分けて進める。**段階1だけで動作確認まで行ける**（AdMobアカウント不要）。
+
+---
+
+## 段階1：テストIDで動作確認（10分）
+
+Google公式のテスト広告IDを使う。アカウント登録なしで「Test Ad」バナーが出る。
+ここまで動けばコード側は完成、あとは本番IDに差し替えるだけ。
+
+### 1.1 `pubspec.yaml` に依存を追加
+
+`dependencies:` の下に：
+
+```yaml
+dependencies:
+  flutter:
+    sdk: flutter
+  # ...既存...
+  google_mobile_ads: ^8.0.0
+```
+
+※ 5.x 系は新しめのGradleと非互換（`configurations.all` の旧構文）。
+   7.0.0以降で修正済みなので8.0.0推奨。Flutter SDKが3.38未満なら^7.0.0、
+   3.27未満なら^6.0.0に落とす。
+
+ターミナルで：
+```
+flutter pub get
+```
+
+### 1.2 Android: `android/app/src/main/AndroidManifest.xml`
+
+`<application ...>` タグの中（`<activity>` と並び）に追加：
+
+```xml
+<application
+    android:label="..."
+    ...>
+    
+    <!-- 既存の <activity> など -->
+    
+    <!-- AdMob: App ID (テスト用。本番リリース前に置換) -->
+    <meta-data
+        android:name="com.google.android.gms.ads.APPLICATION_ID"
+        android:value="ca-app-pub-3940256099942544~3347511713"/>
+</application>
+```
+
+`android/app/build.gradle` の `minSdkVersion` が `23` 以上であることを確認
+（google_mobile_ads 5.x の要件）。Flutter 3.x のデフォルトは大体これ以上。
+
+### 1.3 iOS: `ios/Runner/Info.plist`
+
+`<dict>` 内のどこかに追加：
+
+```xml
+<key>GADApplicationIdentifier</key>
+<string>ca-app-pub-3940256099942544~1458002511</string>
+
+<key>SKAdNetworkItems</key>
+<array>
+    <dict>
+        <key>SKAdNetworkIdentifier</key>
+        <string>cstr6suwn9.skadnetwork</string>
+    </dict>
+</array>
+```
+
+（`SKAdNetworkItems` はiOS 14+ の広告計測用、AdMob推奨）
+
+### 1.4 `lib/main.dart` でSDK初期化
+
+`main()` の上の方に1行追加：
+
+```dart
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await MobileAds.instance.initialize();  // ← 追加
+  
+  // 既存のSQLite接続、辞書ロード、warmup、runApp...
+}
+```
+
+### 1.5 `lib/calendar_screen.dart` の `_AdBannerPlaceholder` を差し替え
+
+ファイル末尾の `class _AdBannerPlaceholder extends StatelessWidget { ... }` を
+**まるごと**下記に置き換え。
+
+冒頭の `import` 部に2行追加：
+
+```dart
+import 'dart:io' show Platform;
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+```
+
+クラス本体：
+
+```dart
+// ============================================================
+// AdMob バナー広告
+// ----------------------------------------------------------
+// IDの差し替え：
+//   現在はGoogle公式テストIDを使用（"Test Ad" が表示される）。
+//   本番リリース前に _kBannerAdUnitId を AdMob管理画面取得のIDへ置換。
+//
+// 非表示条件：
+//   AppSettings.subscriptionState == 'active' なら表示しない。
+//   有料ユーザーには広告を出さない設計。
+// ============================================================
+class _AdBanner extends StatefulWidget {
+  const _AdBanner();
+  @override
+  State<_AdBanner> createState() => _AdBannerState();
+}
+
+// テストID（Google公式）：差し替え対象
+const String _kBannerAdUnitIdAndroid = 'ca-app-pub-3940256099942544/6300978111';
+const String _kBannerAdUnitIdIOS = 'ca-app-pub-3940256099942544/2934735716';
+
+String get _kBannerAdUnitId =>
+    Platform.isAndroid ? _kBannerAdUnitIdAndroid : _kBannerAdUnitIdIOS;
+
+class _AdBannerState extends State<_AdBanner> {
+  BannerAd? _ad;
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _ad = BannerAd(
+      adUnitId: _kBannerAdUnitId,
+      size: AdSize.banner, // 320x50
+      request: const AdRequest(),
+      listener: BannerAdListener(
+        onAdLoaded: (_) {
+          if (mounted) setState(() => _loaded = true);
+        },
+        onAdFailedToLoad: (ad, err) {
+          ad.dispose();
+          // 失敗時は何も表示しない（プレースホルダ高さも0に）
+        },
+      ),
+    )..load();
+  }
+
+  @override
+  void dispose() {
+    _ad?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_loaded || _ad == null) {
+      return const SizedBox(height: 50); // ロード中の予約高さ
+    }
+    return SizedBox(
+      width: _ad!.size.width.toDouble(),
+      height: _ad!.size.height.toDouble(),
+      child: AdWidget(ad: _ad!),
+    );
+  }
+}
+
+// プレースホルダ名のままだと既存の呼び出し箇所と整合しないので、
+// build() 内の `_AdBannerPlaceholder()` を `_AdBanner()` に置換する。
+```
+
+そして `_CalendarScreenState.build()` 内の最下行：
+
+```dart
+const _AdBannerPlaceholder(),
+```
+
+を：
+
+```dart
+const _AdBanner(),
+```
+
+に置換。
+
+#### 有料ユーザーには出さない（推奨）
+
+`AppSettings.subscriptionState` を Riverpod で監視して、`'active'` なら
+`_AdBanner` を `SizedBox.shrink()` に切り替える。E3でサブスク導線を入れる時に
+あわせて実装。今はテスト目的で全員に表示でOK。
+
+### 1.6 確認
+
+```
+flutter run
+```
+
+カレンダー画面下部に `Test Ad` 表記の320×50バナーが出れば成功。
+
+---
+
+## 段階2：本番IDに差し替え（リリース前）
+
+### 2.1 AdMobアカウント作成
+
+https://admob.google.com/ にGoogleアカウントでログインしてアカウント作成。
+Tax info（税情報、源泉徴収用のフォーム）と支払い先銀行情報が必要。
+日本居住者は「W-8BEN」フォーム提出が必要（30%源泉徴収を回避するため）。
+
+### 2.2 アプリ登録
+
+AdMob管理画面 → 「アプリ」 → 「アプリを追加」
+- プラットフォーム選択（Android / iOS、両方なら2回登録）
+- 「アプリはGoogle PlayまたはApp Storeで公開されていますか？」
+  - 開発中なら「いいえ」を選択
+- アプリ名を入力
+
+→ **App ID** を取得（`ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY` 形式）
+
+### 2.3 広告ユニット作成
+
+そのアプリの詳細ページ → 「広告ユニット」 → 「広告ユニットを追加」
+- 形式：「バナー」
+- 広告ユニット名：例 `calendar_bottom_banner`
+
+→ **広告ユニットID** を取得（`ca-app-pub-XXXXXXXXXXXXXXXX/YYYYYYYYYY` 形式）
+
+### 2.4 IDを差し替え
+
+3箇所に分散する：
+
+| ファイル | テストID | 本番ID |
+|---|---|---|
+| `AndroidManifest.xml` の APPLICATION_ID | `ca-app-pub-3940256099942544~3347511713` | Android App ID |
+| `Info.plist` の GADApplicationIdentifier | `ca-app-pub-3940256099942544~1458002511` | iOS App ID |
+| `calendar_screen.dart` の `_kBannerAdUnitIdAndroid` | `ca-app-pub-3940256099942544/6300978111` | Android Unit ID |
+| `calendar_screen.dart` の `_kBannerAdUnitIdIOS` | `ca-app-pub-3940256099942544/2934735716` | iOS Unit ID |
+
+**注意**：本番IDで自分の端末からクリックすると「自己クリック」になりアカウント
+停止リスクあり。実機テストは必ずテストIDか、テストデバイス登録で。
+
+### 2.5 テストデバイス登録（任意、推奨）
+
+本番IDのまま開発端末でクリックしても安全にするため、main.dart で：
+
+```dart
+await MobileAds.instance.initialize();
+await MobileAds.instance.updateRequestConfiguration(
+  RequestConfiguration(
+    testDeviceIds: ['YOUR_DEVICE_ID'],  // ログから取得
+  ),
+);
+```
+
+`YOUR_DEVICE_ID` は初回広告ロード時にコンソールに出る
+`Use RequestConfiguration.Builder().setTestDeviceIds(...)` の中のID文字列。
+
+---
+
+## 段階3：リリース前チェックリスト
+
+### 3.1 iOS App Tracking Transparency（ATT）
+
+iOS 14.5+ ではトラッキング許可を求めるプロンプトが必要（パーソナライズ広告のため）。
+非対応だと収益が大幅に下がる（ユーザーがほぼ全員 IDFA を渡さなくなる）。
+
+実装：
+1. `pubspec.yaml` に `app_tracking_transparency: ^2.0.6+1` 追加
+2. `Info.plist` に：
+   ```xml
+   <key>NSUserTrackingUsageDescription</key>
+   <string>広告のパーソナライズに使用します。</string>
+   ```
+3. アプリ初回起動時（オンボーディング後など、ホーム遷移の直前）で：
+   ```dart
+   await AppTrackingTransparency.requestTrackingAuthorization();
+   ```
+
+iOS のみ。Android では不要。
+
+### 3.2 GDPR / EU ユーザー対応（UMP SDK）
+
+EUユーザーに広告を出すなら、Google UMP SDK で同意取得が必要
+（パッケージ `google_mobile_ads` に含まれる `ConsentInformation` を使う）。
+
+日本市場専用なら**当面不要**。ただしストアでEU圏を配信対象にしているなら
+将来的に対応が必要。実装はやや重いので、初期リリースでは「EU圏配信対象外」と
+ストア設定するのが簡単。
+
+### 3.3 ストアのプライバシー申告
+
+**Apple App Store**：App Store Connect の「App Privacy」で
+- 「Identifiers - Device ID」「Usage Data」を収集と申告
+- 用途：「Third-Party Advertising」
+
+**Google Play**：Play Console の「Data safety」フォームで
+- 「Personal info」収集なし
+- 「App activity」「Device or other IDs」を収集と申告
+- 共有先：「Advertising or marketing」
+
+申告漏れは審査リジェクトされる。
+
+### 3.4 プライバシーポリシーへの追記
+
+アプリ内に表示するプライバシーポリシー（既存ページがあれば）に下記を含める：
+
+```
+本アプリは Google AdMob を利用して広告を表示します。
+AdMob は広告配信のために匿名のデバイス識別子等を使用することがあります。
+詳細は Google のプライバシーポリシーをご参照ください：
+https://policies.google.com/privacy
+```
+
+オプトアウトリンクも案内するとなお良い：
+https://support.google.com/ads/answer/2662922
+
+---
+
+## トラブルシューティング
+
+### `MissingPluginException`
+→ `flutter pub get` 後にホットリスタートではなく**ビルドし直し**が必要：
+`flutter run` を一度止めて再起動。
+
+### iOS シミュレータで広告が出ない
+→ iOS Simulator は AdMob 公式にサポートされてるが時々ロード失敗する。
+実機で確認。
+
+### Android で `No fill` エラー
+→ テストIDなら起きないはず。本番IDで起きるのは正常（広告在庫がない）。
+時間を置くか、別の広告ユニットを試す。
+
+### `RequestConfiguration` が non-personalized になる
+→ ATT非許可 or UMP で同意取得失敗時の挙動。仕様通り。

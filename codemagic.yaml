@@ -1,0 +1,75 @@
+workflows:
+  ios-unsigned-check:
+    name: iOS unsigned build check
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      xcode: latest
+    cache:
+      cache_paths:
+        - ~/.pub-cache
+        - ~/Library/Caches/CocoaPods
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+      - name: Verify Firebase iOS files
+        script: |
+          test -f ios/Runner/GoogleService-Info.plist
+          test -f ios/Runner/Runner.entitlements
+          grep -q "com.studioalveare.hoshimeguri" ios/Runner.xcodeproj/project.pbxproj
+          test "$(grep -c 'IPHONEOS_DEPLOYMENT_TARGET = 15.0' ios/Runner.xcodeproj/project.pbxproj)" -eq 3
+      - name: Build unsigned iOS app
+        script: |
+          flutter build ios --release --no-codesign \
+            --build-number=$PROJECT_BUILD_NUMBER \
+            --dart-define=AI_API_BASE_URL="${AI_API_BASE_URL:-}" \
+            --dart-define=REVENUECAT_IOS_API_KEY="${REVENUECAT_IOS_API_KEY:-}"
+    artifacts:
+      - build/ios/iphoneos/Runner.app
+      - /tmp/xcodebuild_logs/*.log
+
+  ios-testflight:
+    name: iOS TestFlight
+    instance_type: mac_mini_m2
+    max_build_duration: 90
+    integrations:
+      app_store_connect: codemagic
+    environment:
+      groups:
+        - app_runtime
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.studioalveare.hoshimeguri
+      flutter: stable
+      xcode: latest
+    cache:
+      cache_paths:
+        - ~/.pub-cache
+        - ~/Library/Caches/CocoaPods
+    scripts:
+      - name: Set up code signing
+        script: xcode-project use-profiles
+      - name: Get Flutter packages
+        script: flutter pub get
+      - name: Verify iOS configuration
+        script: |
+          test -f ios/Runner/GoogleService-Info.plist
+          test -f ios/Runner/Runner.entitlements
+          grep -q "com.apple.developer.devicecheck.appattest-environment" ios/Runner/Runner.entitlements
+          test "$(grep -c 'IPHONEOS_DEPLOYMENT_TARGET = 15.0' ios/Runner.xcodeproj/project.pbxproj)" -eq 3
+      - name: Build signed IPA
+        script: |
+          flutter build ipa --release \
+            --build-number=$PROJECT_BUILD_NUMBER \
+            --export-options-plist=/Users/builder/export_options.plist \
+            --dart-define=AI_API_BASE_URL="${AI_API_BASE_URL:-}" \
+            --dart-define=REVENUECAT_IOS_API_KEY="${REVENUECAT_IOS_API_KEY:-}"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: false
+        submit_to_app_store: false
