@@ -523,6 +523,7 @@ class _HighlightDayRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final aspect = day.heroAspect;
+    final advice = _highlightDayAdvice(day);
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
@@ -553,6 +554,15 @@ class _HighlightDayRow extends StatelessWidget {
               day.reading.overallHeadline,
               style: const TextStyle(fontSize: 13.5, height: 1.6),
             ),
+            const SizedBox(height: 6),
+            Text(
+              advice,
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.65,
+                color: scheme.onSurface.withValues(alpha: 0.72),
+              ),
+            ),
             if (aspect != null) ...[
               const SizedBox(height: 10),
               AspectNameMarkLabel(
@@ -569,6 +579,25 @@ class _HighlightDayRow extends StatelessWidget {
       ),
     );
   }
+}
+
+String _highlightDayAdvice(_DayReport day) {
+  final aspect = day.heroAspect;
+  final aspectText = aspect == null
+      ? '星の動きは尖りすぎていないので、予定を増やすよりも流れを整える日に向いています。'
+      : isTenseAspect(aspect.type)
+      ? '${_bodyName(aspect.a)}と${_bodyName(aspect.b)}の緊張が出やすい配置です。反応で決めず、返信や判断にひと呼吸置くと扱いやすくなります。'
+      : isHarmoniousAspect(aspect.type)
+      ? '${_bodyName(aspect.a)}と${_bodyName(aspect.b)}の流れが使いやすい日です。小さな提案、連絡、予定の調整を表に出すと進みやすくなります。'
+      : '${_bodyName(aspect.a)}と${_bodyName(aspect.b)}のテーマが意識に上がりやすい日です。気づいたことをメモして、今月の優先順位に反映すると良さが残ります。';
+
+  if (day.score >= 0.62) {
+    return '追い風を使いやすい日です。新しい約束、相談、予約、発信をひとつ前に進めると、月全体の勢いにもつながります。$aspectText';
+  }
+  if (day.score <= 0.38) {
+    return '調整を優先したい日です。予定を詰め込むより、確認、休息、保留していた返事の整理に回すと無駄な消耗を減らせます。$aspectText';
+  }
+  return '安定運用に向いた日です。大きく勝負するより、途中で止まっていた作業を少し進める、生活のリズムを戻す、連絡を整える使い方が合います。$aspectText';
 }
 
 class _CategoryReportRow extends StatelessWidget {

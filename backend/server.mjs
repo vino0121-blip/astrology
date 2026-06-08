@@ -16,7 +16,7 @@ if (getApps().length === 0) {
 const db = getFirestore();
 const port = Number(process.env.PORT || 8080);
 const openAiModel = process.env.OPENAI_MODEL || "gpt-5.4-mini";
-const promptVersion = process.env.PROMPT_VERSION || "2026-06-07.1";
+const promptVersion = process.env.PROMPT_VERSION || "2026-06-08.2";
 const requireAppCheck = process.env.REQUIRE_APP_CHECK !== "false";
 const allowTestPremium = process.env.ALLOW_TEST_PREMIUM === "true";
 const dailyLimit = Number(process.env.MAX_DAILY_GENERATIONS || 1);
@@ -31,9 +31,9 @@ const dailySchema = {
   additionalProperties: false,
   required: ["position", "aspect", "action", "time_plan", "checklist"],
   properties: {
-    position: { type: "string", minLength: 20, maxLength: 260 },
-    aspect: { type: "string", minLength: 20, maxLength: 300 },
-    action: { type: "string", minLength: 20, maxLength: 300 },
+    position: { type: "string", minLength: 80, maxLength: 520 },
+    aspect: { type: "string", minLength: 80, maxLength: 560 },
+    action: { type: "string", minLength: 80, maxLength: 560 },
     time_plan: {
       type: "array",
       minItems: 3,
@@ -44,7 +44,7 @@ const dailySchema = {
         required: ["label", "body"],
         properties: {
           label: { type: "string", enum: ["午前", "午後", "夜"] },
-          body: { type: "string", minLength: 15, maxLength: 180 },
+          body: { type: "string", minLength: 30, maxLength: 240 },
         },
       },
     },
@@ -52,7 +52,7 @@ const dailySchema = {
       type: "array",
       minItems: 3,
       maxItems: 3,
-      items: { type: "string", minLength: 8, maxLength: 100 },
+      items: { type: "string", minLength: 12, maxLength: 120 },
     },
   },
 };
@@ -304,7 +304,7 @@ async function callOpenAi(type, payload) {
         },
       ],
       text: {
-        verbosity: "low",
+        verbosity: type === "daily" ? "medium" : "low",
         format: {
           type: "json_schema",
           name: `${type}_astrology_diagnosis`,
@@ -312,7 +312,7 @@ async function callOpenAi(type, payload) {
           schema,
         },
       },
-      max_output_tokens: type === "daily" ? 1400 : 1800,
+      max_output_tokens: type === "daily" ? 2200 : 1800,
     }),
   });
   const body = await response.json();
@@ -333,6 +333,8 @@ function dailyDeveloperPrompt() {
     "医療、法律、投資、妊娠、寿命、事故を予言・診断しないでください。",
     "恋愛、退職、契約など重大な決断を命令しないでください。",
     "toneがやさしめ診断なら穏やかに、鋭め診断なら率直に、直球診断なら短く強めにします。",
+    "position、aspect、actionはそれぞれ2〜3文で書き、1文だけで終わらせないでください。",
+    "各セクションは、状態の説明、使いどころ、今日の小さな行動の順で具体化してください。",
     "position、aspect、action、時間帯、チェック項目の内容を重複させないでください。",
     "占いは参考情報として、具体的だが小さく実行できる行動に落としてください。",
   ].join("\n");
