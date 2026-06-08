@@ -17,6 +17,10 @@ const useDebugAppCheck = bool.fromEnvironment(
   'USE_DEBUG_APP_CHECK',
   defaultValue: false,
 );
+const skipAiAppCheck = bool.fromEnvironment(
+  'SKIP_AI_APP_CHECK',
+  defaultValue: false,
+);
 
 class AiPlatformService {
   bool _initialized = false;
@@ -81,8 +85,10 @@ class AiPlatformService {
     if (user == null) return null;
 
     final idToken = await user.getIdToken();
-    final appCheckToken = await FirebaseAppCheck.instance.getToken();
-    if (idToken == null || appCheckToken == null) return null;
+    final appCheckToken = skipAiAppCheck
+        ? null
+        : await FirebaseAppCheck.instance.getToken();
+    if (idToken == null) return null;
     return AiRequestCredentials(
       userId: user.uid,
       idToken: idToken,
@@ -94,7 +100,7 @@ class AiPlatformService {
 class AiRequestCredentials {
   final String userId;
   final String idToken;
-  final String appCheckToken;
+  final String? appCheckToken;
 
   const AiRequestCredentials({
     required this.userId,

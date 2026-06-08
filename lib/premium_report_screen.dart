@@ -100,6 +100,12 @@ class _PremiumReportScreenState extends ConsumerState<PremiumReportScreen> {
                     snap.connectionState != ConnectionState.done) {
                   return const Center(child: CircularProgressIndicator());
                 }
+                if (snap.hasError) {
+                  return _MonthlyReportError(
+                    message: snap.error.toString(),
+                    onRetry: () => setState(_refresh),
+                  );
+                }
                 final report = snap.data;
                 if (report == null) {
                   return const Center(
@@ -115,6 +121,54 @@ class _PremiumReportScreenState extends ConsumerState<PremiumReportScreen> {
           },
         ),
       ),
+    );
+  }
+}
+
+class _MonthlyReportError extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+  const _MonthlyReportError({required this.message, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(24, 40, 24, 32),
+      children: [
+        Icon(Icons.error_outline, size: 42, color: scheme.error),
+        const SizedBox(height: 16),
+        const Text(
+          '月間AI診断の準備中にエラーが出ました',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          '出生情報は登録されています。通信設定か月間データの生成で止まっているため、下の内容を確認してください。',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            height: 1.7,
+            color: scheme.onSurface.withValues(alpha: 0.72),
+          ),
+        ),
+        const SizedBox(height: 16),
+        SelectableText(
+          message,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 12,
+            height: 1.5,
+            color: scheme.onSurface.withValues(alpha: 0.64),
+          ),
+        ),
+        const SizedBox(height: 20),
+        FilledButton.icon(
+          onPressed: onRetry,
+          icon: const Icon(Icons.refresh),
+          label: const Text('再試行'),
+        ),
+      ],
     );
   }
 }
@@ -640,53 +694,70 @@ Future<_MonthlyReport?> _buildMonthlyReport(
   AiDiagnosisService aiService,
   DateTime month,
 ) async {
-  final chart = await svc.resolveNatalChart();
-  if (chart == null) return null;
+  try {
+    final user = await svc.currentUser();
+    if (user == null) return null;
 
-  final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
-  final days = <_DayReport>[];
-  for (var day = 1; day <= daysInMonth; day++) {
-    final date = DateTime(month.year, month.month, day, 12);
-    final reading = await svc.getReadingForDate(date);
-    if (reading == null) continue;
-    final hero = await svc.getHeroAspectForDate(date);
-    days.add(
-      _DayReport(
-        date: date,
-        score: reading.overallScore,
-        reading: reading,
-        heroAspect: hero,
-      ),
+    final chart = await svc.resolveNatalChart();
+    if (chart == null) {
+      throw StateError(
+        'Natal chart could not be generated for user ${user.id}.',
+      );
+    }
+
+    final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
+    final days = <_DayReport>[];
+    for (var day = 1; day <= daysInMonth; day++) {
+      final date = DateTime(month.year, month.month, day, 12);
+      final reading = await svc.getReadingForDate(date);
+      if (reading == null) continue;
+      final hero = await svc.getHeroAspectForDate(date);
+      days.add(
+        _DayReport(
+          date: date,
+          score: reading.overallScore,
+          reading: reading,
+          heroAspect: hero,
+        ),
+      );
+    }
+    if (days.isEmpty) {
+      throw StateError(
+        'Monthly readings could not be generated for user ${user.id}.',
+      );
+    }
+
+    final average =
+        days.map((d) => d.score).reduce((a, b) => a + b) / days.length;
+    final best = days.reduce((a, b) => a.score >= b.score ? a : b);
+    final careful = days.reduce((a, b) => a.score <= b.score ? a : b);
+    final sortedHigh = [...days]..sort((a, b) => b.score.compareTo(a.score));
+    final sortedLow = [...days]..sort((a, b) => a.score.compareTo(b.score));
+    final highlight = <_DayReport>[];
+    for (final d in [...sortedHigh.take(3), ...sortedLow.take(3)]) {
+      if (!highlight.any((e) => _sameDay(e.date, d.date))) highlight.add(d);
+    }
+    highlight.sort((a, b) => a.date.compareTo(b.date));
+
+    final base = _MonthlyReport(
+      month: month,
+      chart: chart,
+      days: days,
+      averageScore: average,
+      best: best,
+      careful: careful,
+      highlightDays: highlight,
+      weeks: _buildWeeks(days),
+      categories: _buildCategories(days),
+      fallbackAiBlocks: _buildAiBlocks(chart, days, average, best, careful),
     );
+    final generated = await aiService.generateMonthly(base.toAiInput());
+    return base.withGenerated(generated);
+  } catch (error, stackTrace) {
+    debugPrint('Monthly AI diagnosis failed: $error');
+    debugPrintStack(stackTrace: stackTrace);
+    rethrow;
   }
-  if (days.isEmpty) return null;
-
-  final average =
-      days.map((d) => d.score).reduce((a, b) => a + b) / days.length;
-  final best = days.reduce((a, b) => a.score >= b.score ? a : b);
-  final careful = days.reduce((a, b) => a.score <= b.score ? a : b);
-  final sortedHigh = [...days]..sort((a, b) => b.score.compareTo(a.score));
-  final sortedLow = [...days]..sort((a, b) => a.score.compareTo(b.score));
-  final highlight = <_DayReport>[];
-  for (final d in [...sortedHigh.take(3), ...sortedLow.take(3)]) {
-    if (!highlight.any((e) => _sameDay(e.date, d.date))) highlight.add(d);
-  }
-  highlight.sort((a, b) => a.date.compareTo(b.date));
-
-  final base = _MonthlyReport(
-    month: month,
-    chart: chart,
-    days: days,
-    averageScore: average,
-    best: best,
-    careful: careful,
-    highlightDays: highlight,
-    weeks: _buildWeeks(days),
-    categories: _buildCategories(days),
-    fallbackAiBlocks: _buildAiBlocks(chart, days, average, best, careful),
-  );
-  final generated = await aiService.generateMonthly(base.toAiInput());
-  return base.withGenerated(generated);
 }
 
 List<_WeekReport> _buildWeeks(List<_DayReport> days) {

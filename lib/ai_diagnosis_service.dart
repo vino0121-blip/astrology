@@ -55,7 +55,10 @@ class AiDiagnosisService {
         HttpHeaders.authorizationHeader,
         'Bearer ${credentials.idToken}',
       );
-      request.headers.set('X-Firebase-AppCheck', credentials.appCheckToken);
+      final appCheckToken = credentials.appCheckToken;
+      if (appCheckToken != null) {
+        request.headers.set('X-Firebase-AppCheck', appCheckToken);
+      }
       request.write(jsonEncode(body));
 
       final response = await request.close().timeout(
