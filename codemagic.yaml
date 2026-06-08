@@ -4,6 +4,8 @@ workflows:
     instance_type: mac_mini_m2
     max_build_duration: 60
     environment:
+      groups:
+        - app_runtime
       flutter: stable
       xcode: latest
     cache:
@@ -19,6 +21,7 @@ workflows:
           test -f ios/Runner/Runner.entitlements
           grep -q "com.studioalveare.hoshimeguri" ios/Runner.xcodeproj/project.pbxproj
           test "$(grep -c 'IPHONEOS_DEPLOYMENT_TARGET = 15.0' ios/Runner.xcodeproj/project.pbxproj)" -eq 3
+          test -n "$AI_API_BASE_URL"
       - name: Build unsigned iOS app
         script: |
           flutter build ios --release --no-codesign \
@@ -58,6 +61,7 @@ workflows:
           test -f ios/Runner/Runner.entitlements
           grep -q "com.apple.developer.devicecheck.appattest-environment" ios/Runner/Runner.entitlements
           test "$(grep -c 'IPHONEOS_DEPLOYMENT_TARGET = 15.0' ios/Runner.xcodeproj/project.pbxproj)" -eq 3
+          test -n "$AI_API_BASE_URL"
       - name: Build signed IPA
         script: |
           flutter build ipa --release \
