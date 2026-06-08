@@ -2653,6 +2653,420 @@ class DailyReadingCachesCompanion extends UpdateCompanion<DailyReadingCache> {
   }
 }
 
+class $AiDiagnosisCachesTable extends AiDiagnosisCaches
+    with TableInfo<$AiDiagnosisCachesTable, AiDiagnosisCache> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AiDiagnosisCachesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+  @override
+  late final GeneratedColumn<String> type = GeneratedColumn<String>(
+    'type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _periodMeta = const VerificationMeta('period');
+  @override
+  late final GeneratedColumn<String> period = GeneratedColumn<String>(
+    'period',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _payloadKeyMeta = const VerificationMeta(
+    'payloadKey',
+  );
+  @override
+  late final GeneratedColumn<String> payloadKey = GeneratedColumn<String>(
+    'payload_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _resultJsonMeta = const VerificationMeta(
+    'resultJson',
+  );
+  @override
+  late final GeneratedColumn<String> resultJson = GeneratedColumn<String>(
+    'result_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _generatedAtMeta = const VerificationMeta(
+    'generatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> generatedAt = GeneratedColumn<DateTime>(
+    'generated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    type,
+    period,
+    payloadKey,
+    resultJson,
+    generatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'ai_diagnosis_caches';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<AiDiagnosisCache> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('type')) {
+      context.handle(
+        _typeMeta,
+        type.isAcceptableOrUnknown(data['type']!, _typeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_typeMeta);
+    }
+    if (data.containsKey('period')) {
+      context.handle(
+        _periodMeta,
+        period.isAcceptableOrUnknown(data['period']!, _periodMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_periodMeta);
+    }
+    if (data.containsKey('payload_key')) {
+      context.handle(
+        _payloadKeyMeta,
+        payloadKey.isAcceptableOrUnknown(data['payload_key']!, _payloadKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_payloadKeyMeta);
+    }
+    if (data.containsKey('result_json')) {
+      context.handle(
+        _resultJsonMeta,
+        resultJson.isAcceptableOrUnknown(data['result_json']!, _resultJsonMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_resultJsonMeta);
+    }
+    if (data.containsKey('generated_at')) {
+      context.handle(
+        _generatedAtMeta,
+        generatedAt.isAcceptableOrUnknown(
+          data['generated_at']!,
+          _generatedAtMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {type, period, payloadKey},
+  ];
+  @override
+  AiDiagnosisCache map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AiDiagnosisCache(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      type: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}type'],
+      )!,
+      period: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}period'],
+      )!,
+      payloadKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}payload_key'],
+      )!,
+      resultJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}result_json'],
+      )!,
+      generatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}generated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $AiDiagnosisCachesTable createAlias(String alias) {
+    return $AiDiagnosisCachesTable(attachedDatabase, alias);
+  }
+}
+
+class AiDiagnosisCache extends DataClass
+    implements Insertable<AiDiagnosisCache> {
+  final int id;
+
+  /// 'daily' / 'monthly'
+  final String type;
+
+  /// daily: yyyy-MM-dd, monthly: yyyy-MM
+  final String period;
+
+  /// Birth data + calculated input JSON. If birth time/place changes, this key changes.
+  final String payloadKey;
+  final String resultJson;
+  final DateTime generatedAt;
+  const AiDiagnosisCache({
+    required this.id,
+    required this.type,
+    required this.period,
+    required this.payloadKey,
+    required this.resultJson,
+    required this.generatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['type'] = Variable<String>(type);
+    map['period'] = Variable<String>(period);
+    map['payload_key'] = Variable<String>(payloadKey);
+    map['result_json'] = Variable<String>(resultJson);
+    map['generated_at'] = Variable<DateTime>(generatedAt);
+    return map;
+  }
+
+  AiDiagnosisCachesCompanion toCompanion(bool nullToAbsent) {
+    return AiDiagnosisCachesCompanion(
+      id: Value(id),
+      type: Value(type),
+      period: Value(period),
+      payloadKey: Value(payloadKey),
+      resultJson: Value(resultJson),
+      generatedAt: Value(generatedAt),
+    );
+  }
+
+  factory AiDiagnosisCache.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AiDiagnosisCache(
+      id: serializer.fromJson<int>(json['id']),
+      type: serializer.fromJson<String>(json['type']),
+      period: serializer.fromJson<String>(json['period']),
+      payloadKey: serializer.fromJson<String>(json['payloadKey']),
+      resultJson: serializer.fromJson<String>(json['resultJson']),
+      generatedAt: serializer.fromJson<DateTime>(json['generatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'type': serializer.toJson<String>(type),
+      'period': serializer.toJson<String>(period),
+      'payloadKey': serializer.toJson<String>(payloadKey),
+      'resultJson': serializer.toJson<String>(resultJson),
+      'generatedAt': serializer.toJson<DateTime>(generatedAt),
+    };
+  }
+
+  AiDiagnosisCache copyWith({
+    int? id,
+    String? type,
+    String? period,
+    String? payloadKey,
+    String? resultJson,
+    DateTime? generatedAt,
+  }) => AiDiagnosisCache(
+    id: id ?? this.id,
+    type: type ?? this.type,
+    period: period ?? this.period,
+    payloadKey: payloadKey ?? this.payloadKey,
+    resultJson: resultJson ?? this.resultJson,
+    generatedAt: generatedAt ?? this.generatedAt,
+  );
+  AiDiagnosisCache copyWithCompanion(AiDiagnosisCachesCompanion data) {
+    return AiDiagnosisCache(
+      id: data.id.present ? data.id.value : this.id,
+      type: data.type.present ? data.type.value : this.type,
+      period: data.period.present ? data.period.value : this.period,
+      payloadKey: data.payloadKey.present
+          ? data.payloadKey.value
+          : this.payloadKey,
+      resultJson: data.resultJson.present
+          ? data.resultJson.value
+          : this.resultJson,
+      generatedAt: data.generatedAt.present
+          ? data.generatedAt.value
+          : this.generatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AiDiagnosisCache(')
+          ..write('id: $id, ')
+          ..write('type: $type, ')
+          ..write('period: $period, ')
+          ..write('payloadKey: $payloadKey, ')
+          ..write('resultJson: $resultJson, ')
+          ..write('generatedAt: $generatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, type, period, payloadKey, resultJson, generatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AiDiagnosisCache &&
+          other.id == this.id &&
+          other.type == this.type &&
+          other.period == this.period &&
+          other.payloadKey == this.payloadKey &&
+          other.resultJson == this.resultJson &&
+          other.generatedAt == this.generatedAt);
+}
+
+class AiDiagnosisCachesCompanion extends UpdateCompanion<AiDiagnosisCache> {
+  final Value<int> id;
+  final Value<String> type;
+  final Value<String> period;
+  final Value<String> payloadKey;
+  final Value<String> resultJson;
+  final Value<DateTime> generatedAt;
+  const AiDiagnosisCachesCompanion({
+    this.id = const Value.absent(),
+    this.type = const Value.absent(),
+    this.period = const Value.absent(),
+    this.payloadKey = const Value.absent(),
+    this.resultJson = const Value.absent(),
+    this.generatedAt = const Value.absent(),
+  });
+  AiDiagnosisCachesCompanion.insert({
+    this.id = const Value.absent(),
+    required String type,
+    required String period,
+    required String payloadKey,
+    required String resultJson,
+    this.generatedAt = const Value.absent(),
+  }) : type = Value(type),
+       period = Value(period),
+       payloadKey = Value(payloadKey),
+       resultJson = Value(resultJson);
+  static Insertable<AiDiagnosisCache> custom({
+    Expression<int>? id,
+    Expression<String>? type,
+    Expression<String>? period,
+    Expression<String>? payloadKey,
+    Expression<String>? resultJson,
+    Expression<DateTime>? generatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (type != null) 'type': type,
+      if (period != null) 'period': period,
+      if (payloadKey != null) 'payload_key': payloadKey,
+      if (resultJson != null) 'result_json': resultJson,
+      if (generatedAt != null) 'generated_at': generatedAt,
+    });
+  }
+
+  AiDiagnosisCachesCompanion copyWith({
+    Value<int>? id,
+    Value<String>? type,
+    Value<String>? period,
+    Value<String>? payloadKey,
+    Value<String>? resultJson,
+    Value<DateTime>? generatedAt,
+  }) {
+    return AiDiagnosisCachesCompanion(
+      id: id ?? this.id,
+      type: type ?? this.type,
+      period: period ?? this.period,
+      payloadKey: payloadKey ?? this.payloadKey,
+      resultJson: resultJson ?? this.resultJson,
+      generatedAt: generatedAt ?? this.generatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (type.present) {
+      map['type'] = Variable<String>(type.value);
+    }
+    if (period.present) {
+      map['period'] = Variable<String>(period.value);
+    }
+    if (payloadKey.present) {
+      map['payload_key'] = Variable<String>(payloadKey.value);
+    }
+    if (resultJson.present) {
+      map['result_json'] = Variable<String>(resultJson.value);
+    }
+    if (generatedAt.present) {
+      map['generated_at'] = Variable<DateTime>(generatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AiDiagnosisCachesCompanion(')
+          ..write('id: $id, ')
+          ..write('type: $type, ')
+          ..write('period: $period, ')
+          ..write('payloadKey: $payloadKey, ')
+          ..write('resultJson: $resultJson, ')
+          ..write('generatedAt: $generatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $AppSettingsTable extends AppSettings
     with TableInfo<$AppSettingsTable, AppSetting> {
   @override
@@ -2815,10 +3229,7 @@ class $AppSettingsTable extends AppSettings
     if (data.containsKey('roast_level')) {
       context.handle(
         _roastLevelMeta,
-        roastLevel.isAcceptableOrUnknown(
-          data['roast_level']!,
-          _roastLevelMeta,
-        ),
+        roastLevel.isAcceptableOrUnknown(data['roast_level']!, _roastLevelMeta),
       );
     }
     if (data.containsKey('subscription_state')) {
@@ -3229,6 +3640,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $PartnersTable partners = $PartnersTable(this);
   late final $DailyReadingCachesTable dailyReadingCaches =
       $DailyReadingCachesTable(this);
+  late final $AiDiagnosisCachesTable aiDiagnosisCaches =
+      $AiDiagnosisCachesTable(this);
   late final $AppSettingsTable appSettings = $AppSettingsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
@@ -3239,6 +3652,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     natalChartCaches,
     partners,
     dailyReadingCaches,
+    aiDiagnosisCaches,
     appSettings,
   ];
   @override
@@ -5214,6 +5628,238 @@ typedef $$DailyReadingCachesTableProcessedTableManager =
       DailyReadingCache,
       PrefetchHooks Function({bool userProfileId})
     >;
+typedef $$AiDiagnosisCachesTableCreateCompanionBuilder =
+    AiDiagnosisCachesCompanion Function({
+      Value<int> id,
+      required String type,
+      required String period,
+      required String payloadKey,
+      required String resultJson,
+      Value<DateTime> generatedAt,
+    });
+typedef $$AiDiagnosisCachesTableUpdateCompanionBuilder =
+    AiDiagnosisCachesCompanion Function({
+      Value<int> id,
+      Value<String> type,
+      Value<String> period,
+      Value<String> payloadKey,
+      Value<String> resultJson,
+      Value<DateTime> generatedAt,
+    });
+
+class $$AiDiagnosisCachesTableFilterComposer
+    extends Composer<_$AppDatabase, $AiDiagnosisCachesTable> {
+  $$AiDiagnosisCachesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get period => $composableBuilder(
+    column: $table.period,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get payloadKey => $composableBuilder(
+    column: $table.payloadKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get resultJson => $composableBuilder(
+    column: $table.resultJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get generatedAt => $composableBuilder(
+    column: $table.generatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$AiDiagnosisCachesTableOrderingComposer
+    extends Composer<_$AppDatabase, $AiDiagnosisCachesTable> {
+  $$AiDiagnosisCachesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get period => $composableBuilder(
+    column: $table.period,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get payloadKey => $composableBuilder(
+    column: $table.payloadKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get resultJson => $composableBuilder(
+    column: $table.resultJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get generatedAt => $composableBuilder(
+    column: $table.generatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$AiDiagnosisCachesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $AiDiagnosisCachesTable> {
+  $$AiDiagnosisCachesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<String> get period =>
+      $composableBuilder(column: $table.period, builder: (column) => column);
+
+  GeneratedColumn<String> get payloadKey => $composableBuilder(
+    column: $table.payloadKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get resultJson => $composableBuilder(
+    column: $table.resultJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get generatedAt => $composableBuilder(
+    column: $table.generatedAt,
+    builder: (column) => column,
+  );
+}
+
+class $$AiDiagnosisCachesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $AiDiagnosisCachesTable,
+          AiDiagnosisCache,
+          $$AiDiagnosisCachesTableFilterComposer,
+          $$AiDiagnosisCachesTableOrderingComposer,
+          $$AiDiagnosisCachesTableAnnotationComposer,
+          $$AiDiagnosisCachesTableCreateCompanionBuilder,
+          $$AiDiagnosisCachesTableUpdateCompanionBuilder,
+          (
+            AiDiagnosisCache,
+            BaseReferences<
+              _$AppDatabase,
+              $AiDiagnosisCachesTable,
+              AiDiagnosisCache
+            >,
+          ),
+          AiDiagnosisCache,
+          PrefetchHooks Function()
+        > {
+  $$AiDiagnosisCachesTableTableManager(
+    _$AppDatabase db,
+    $AiDiagnosisCachesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AiDiagnosisCachesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AiDiagnosisCachesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$AiDiagnosisCachesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> type = const Value.absent(),
+                Value<String> period = const Value.absent(),
+                Value<String> payloadKey = const Value.absent(),
+                Value<String> resultJson = const Value.absent(),
+                Value<DateTime> generatedAt = const Value.absent(),
+              }) => AiDiagnosisCachesCompanion(
+                id: id,
+                type: type,
+                period: period,
+                payloadKey: payloadKey,
+                resultJson: resultJson,
+                generatedAt: generatedAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String type,
+                required String period,
+                required String payloadKey,
+                required String resultJson,
+                Value<DateTime> generatedAt = const Value.absent(),
+              }) => AiDiagnosisCachesCompanion.insert(
+                id: id,
+                type: type,
+                period: period,
+                payloadKey: payloadKey,
+                resultJson: resultJson,
+                generatedAt: generatedAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$AiDiagnosisCachesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $AiDiagnosisCachesTable,
+      AiDiagnosisCache,
+      $$AiDiagnosisCachesTableFilterComposer,
+      $$AiDiagnosisCachesTableOrderingComposer,
+      $$AiDiagnosisCachesTableAnnotationComposer,
+      $$AiDiagnosisCachesTableCreateCompanionBuilder,
+      $$AiDiagnosisCachesTableUpdateCompanionBuilder,
+      (
+        AiDiagnosisCache,
+        BaseReferences<
+          _$AppDatabase,
+          $AiDiagnosisCachesTable,
+          AiDiagnosisCache
+        >,
+      ),
+      AiDiagnosisCache,
+      PrefetchHooks Function()
+    >;
 typedef $$AppSettingsTableCreateCompanionBuilder =
     AppSettingsCompanion Function({
       Value<int> id,
@@ -5491,6 +6137,8 @@ class $AppDatabaseManager {
       $$PartnersTableTableManager(_db, _db.partners);
   $$DailyReadingCachesTableTableManager get dailyReadingCaches =>
       $$DailyReadingCachesTableTableManager(_db, _db.dailyReadingCaches);
+  $$AiDiagnosisCachesTableTableManager get aiDiagnosisCaches =>
+      $$AiDiagnosisCachesTableTableManager(_db, _db.aiDiagnosisCaches);
   $$AppSettingsTableTableManager get appSettings =>
       $$AppSettingsTableTableManager(_db, _db.appSettings);
 }

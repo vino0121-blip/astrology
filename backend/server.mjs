@@ -19,7 +19,7 @@ const openAiModel = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const promptVersion = process.env.PROMPT_VERSION || "2026-06-08.2";
 const requireAppCheck = process.env.REQUIRE_APP_CHECK !== "false";
 const allowTestPremium = process.env.ALLOW_TEST_PREMIUM === "true";
-const dailyLimit = Number(process.env.MAX_DAILY_GENERATIONS || 1);
+const dailyLimit = Number(process.env.MAX_DAILY_GENERATIONS || 2);
 const monthlyLimit = Number(process.env.MAX_MONTHLY_GENERATIONS_PER_DAY || 3);
 const revenueCatEntitlement =
   process.env.REVENUECAT_ENTITLEMENT_ID || "premium";

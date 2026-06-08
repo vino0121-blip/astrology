@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -239,6 +241,17 @@ class _DailyAiView extends StatelessWidget {
             _ScoreBadge(label: report.sourceLabel),
           ],
         ),
+        if (report.generated == null) ...[
+          const SizedBox(height: 8),
+          Text(
+            '今日のAI診断は1日1回です。出生情報を直した場合のみ、その日に1回だけ再生成できます。さらに変更した内容は翌日から反映されます。',
+            style: TextStyle(
+              fontSize: 11.5,
+              height: 1.5,
+              color: scheme.onSurface.withValues(alpha: 0.55),
+            ),
+          ),
+        ],
         const SizedBox(height: 14),
         if (aspect != null)
           Card(
@@ -506,13 +519,58 @@ Future<_DailyAiReport?> _buildDailyAiReport(
       rank: rank,
       roastLevel: level,
     );
-    final generated = await aiService.generateDaily(base.toAiInput());
+    final input = base.toAiInput();
+    final period = input.date;
+    final payloadKey = _aiCachePayloadKey(input.toJson(), user);
+    final cached = await svc.db.getAiDiagnosisCache(
+      type: 'daily',
+      period: period,
+      payloadKey: payloadKey,
+    );
+
+    AiDailyDiagnosis? generated;
+    try {
+      generated = await aiService.generateDaily(input);
+    } catch (error, stackTrace) {
+      debugPrint('Daily AI generation request failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+
+    if (generated != null) {
+      await svc.db.saveAiDiagnosisCache(
+        type: 'daily',
+        period: period,
+        payloadKey: payloadKey,
+        resultJson: jsonEncode(generated.toJson()),
+      );
+      return base.withGenerated(generated);
+    }
+    if (cached != null) {
+      return base.withGenerated(
+        AiDailyDiagnosis.fromJson(
+          jsonDecode(cached.resultJson) as Map<String, dynamic>,
+        ),
+      );
+    }
     return base.withGenerated(generated);
   } catch (error, stackTrace) {
     debugPrint('Daily AI diagnosis failed: $error');
     debugPrintStack(stackTrace: stackTrace);
     rethrow;
   }
+}
+
+String _aiCachePayloadKey(Map<String, dynamic> payload, dynamic user) {
+  return jsonEncode({
+    'birthUtc': user.birthUtc.toIso8601String(),
+    'birthLocalIso': user.birthLocalIso,
+    'birthTimeUnknown': user.birthTimeUnknown,
+    'birthPlaceName': user.birthPlaceName,
+    'latitude': user.latitude,
+    'longitudeEast': user.longitudeEast,
+    'timezoneOffsetMinutes': user.timezoneOffsetMinutes,
+    'payload': payload,
+  });
 }
 
 String _dailyAspectAdvice(Aspect aspect) {

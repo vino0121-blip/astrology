@@ -185,6 +185,14 @@ class AiDailyDiagnosis {
       checklist: (json['checklist'] as List).cast<String>(),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'position': position,
+    'aspect': aspect,
+    'action': action,
+    'time_plan': timePlan.map((line) => line.toJson()).toList(),
+    'checklist': checklist,
+  };
 }
 
 class AiMonthlyInput {
@@ -237,6 +245,11 @@ class AiMonthlyDiagnosis {
           .toList(),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'title': title,
+    'blocks': blocks.map((block) => block.toJson()).toList(),
+  };
 }
 
 class AiMonthlyBlock {
@@ -251,4 +264,6 @@ class AiMonthlyBlock {
       body: json['body'] as String,
     );
   }
+
+  Map<String, dynamic> toJson() => {'title': title, 'body': body};
 }

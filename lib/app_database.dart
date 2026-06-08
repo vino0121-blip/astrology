@@ -98,8 +98,9 @@ class AspectListConverter extends TypeConverter<List<Aspect>, String> {
   }
 
   @override
-  String toSql(List<Aspect> value) => jsonEncode(
-      [for (final a in value) [a.a.name, a.b.name, a.type.name, a.orb]]);
+  String toSql(List<Aspect> value) => jsonEncode([
+    for (final a in value) [a.a.name, a.b.name, a.type.name, a.orb],
+  ]);
 }
 
 /// Map<String, String>（カテゴリ別文章）⇔ JSON
@@ -154,10 +155,8 @@ class UserProfiles extends Table {
   /// UTCからの分単位オフセット（JST=+540）
   IntColumn get timezoneOffsetMinutes => integer()();
 
-  DateTimeColumn get createdAt =>
-      dateTime().withDefault(currentDateAndTime)();
-  DateTimeColumn get updatedAt =>
-      dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
 }
 
 /// 出生図の計算結果キャッシュ（ユーザーごとに 1 行）
@@ -166,8 +165,7 @@ class NatalChartCaches extends Table {
       integer().references(UserProfiles, #id, onDelete: KeyAction.cascade)();
 
   RealColumn get jd => real()();
-  TextColumn get positions =>
-      text().map(const BodyMapConverter())();
+  TextColumn get positions => text().map(const BodyMapConverter())();
   RealColumn get ascendant => real()();
   RealColumn get midheaven => real()();
   TextColumn get cusps => text().map(const DoubleListConverter())();
@@ -175,6 +173,7 @@ class NatalChartCaches extends Table {
 
   /// 'wholeSign' / 'equal'
   TextColumn get houseSystem => text()();
+
   /// 計算したエンジンのバージョン（差分があれば再計算）
   TextColumn get ephemerisVersion => text()();
   DateTimeColumn get generatedAt =>
@@ -201,11 +200,9 @@ class Partners extends Table {
   IntColumn get timezoneOffsetMinutes => integer()();
 
   /// 'lover' / 'friend' / 'family' / 'work' / 'other'
-  TextColumn get relationship =>
-      text().withDefault(const Constant('other'))();
+  TextColumn get relationship => text().withDefault(const Constant('other'))();
 
-  DateTimeColumn get createdAt =>
-      dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
 /// 日次運勢のキャッシュ（ユーザー × ローカル暦日 で一意）
@@ -221,11 +218,11 @@ class DailyReadingCaches extends Table {
   RealColumn get overallScore => real()();
 
   /// カテゴリ → 文章
-  TextColumn get categoryTexts =>
-      text().map(const StringMapConverter())();
+  TextColumn get categoryTexts => text().map(const StringMapConverter())();
 
   /// 生成時の辞書バージョン（差分があれば再生成）
   TextColumn get dictionaryVersion => text()();
+
   /// 生成時のエンジンバージョン
   TextColumn get ephemerisVersion => text()();
 
@@ -234,8 +231,30 @@ class DailyReadingCaches extends Table {
 
   @override
   List<Set<Column>> get uniqueKeys => [
-        {userProfileId, localDate},
-      ];
+    {userProfileId, localDate},
+  ];
+}
+
+class AiDiagnosisCaches extends Table {
+  IntColumn get id => integer().autoIncrement()();
+
+  /// 'daily' / 'monthly'
+  TextColumn get type => text()();
+
+  /// daily: yyyy-MM-dd, monthly: yyyy-MM
+  TextColumn get period => text()();
+
+  /// Birth data + calculated input JSON. If birth time/place changes, this key changes.
+  TextColumn get payloadKey => text()();
+
+  TextColumn get resultJson => text()();
+  DateTimeColumn get generatedAt =>
+      dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+    {type, period, payloadKey},
+  ];
 }
 
 /// アプリ設定（id=1 のシングルトン運用）
@@ -244,15 +263,17 @@ class AppSettings extends Table {
 
   BoolColumn get notificationsEnabled =>
       boolean().withDefault(const Constant(true))();
+
   /// 通知時刻（"08:00"）
   TextColumn get dailyNotificationTimeLocal =>
       text().withDefault(const Constant('08:00'))();
+
   /// 'system' / 'light' / 'dark'
   TextColumn get themePreference =>
       text().withDefault(const Constant('system'))();
+
   /// 'mild' / 'sharp' / 'extraHot'
-  TextColumn get roastLevel =>
-      text().withDefault(const Constant('mild'))();
+  TextColumn get roastLevel => text().withDefault(const Constant('mild'))();
 
   /// 'none' / 'active' / 'expired' / 'trial'
   /// 起動時に RevenueCat から同期
@@ -271,28 +292,34 @@ class AppSettings extends Table {
 // ============================================================
 // データベース本体
 // ============================================================
-@DriftDatabase(tables: [
-  UserProfiles,
-  NatalChartCaches,
-  Partners,
-  DailyReadingCaches,
-  AppSettings,
-])
+@DriftDatabase(
+  tables: [
+    UserProfiles,
+    NatalChartCaches,
+    Partners,
+    DailyReadingCaches,
+    AiDiagnosisCaches,
+    AppSettings,
+  ],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase(QueryExecutor e) : super(e);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (m) => m.createAll(),
-        onUpgrade: (m, from, to) async {
-          if (from < 2) {
-            await m.addColumn(appSettings, appSettings.roastLevel);
-          }
-        },
-      );
+    onCreate: (m) => m.createAll(),
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        await m.addColumn(appSettings, appSettings.roastLevel);
+      }
+      if (from < 3) {
+        await m.createTable(aiDiagnosisCaches);
+      }
+    },
+  );
 
   // --- UserProfile ---
 
@@ -310,15 +337,17 @@ class AppDatabase extends _$AppDatabase {
         id: Value(existing.id),
         updatedAt: Value(DateTime.now()),
       );
-      await (update(userProfiles)..where((t) => t.id.equals(existing.id)))
-          .write(next);
+      await (update(
+        userProfiles,
+      )..where((t) => t.id.equals(existing.id))).write(next);
       // 出生情報が変わったらキャッシュを破棄
-      await (delete(natalChartCaches)
-            ..where((t) => t.userProfileId.equals(existing.id)))
-          .go();
-      await (delete(dailyReadingCaches)
-            ..where((t) => t.userProfileId.equals(existing.id)))
-          .go();
+      await (delete(
+        natalChartCaches,
+      )..where((t) => t.userProfileId.equals(existing.id))).go();
+      await (delete(
+        dailyReadingCaches,
+      )..where((t) => t.userProfileId.equals(existing.id))).go();
+      await delete(aiDiagnosisCaches).go();
       return existing.id;
     }
   }
@@ -327,17 +356,18 @@ class AppDatabase extends _$AppDatabase {
 
   /// キャッシュが有効ならそれを返す。期限切れ/未生成なら null。
   Future<NatalChartCache?> getValidChartCache(int userId) async {
-    final row = await (select(natalChartCaches)
-          ..where((t) =>
-              t.userProfileId.equals(userId) &
-              t.ephemerisVersion.equals(kEphemerisVersion)))
-        .getSingleOrNull();
+    final row =
+        await (select(natalChartCaches)..where(
+              (t) =>
+                  t.userProfileId.equals(userId) &
+                  t.ephemerisVersion.equals(kEphemerisVersion),
+            ))
+            .getSingleOrNull();
     return row;
   }
 
   Future<void> saveChartCache(NatalChartCachesCompanion c) async {
-    await into(natalChartCaches)
-        .insert(c, mode: InsertMode.insertOrReplace);
+    await into(natalChartCaches).insert(c, mode: InsertMode.insertOrReplace);
   }
 
   // --- Partners ---
@@ -345,9 +375,9 @@ class AppDatabase extends _$AppDatabase {
   Future<List<Partner>> listPartners(int userId) =>
       (select(partners)..where((t) => t.userProfileId.equals(userId))).get();
 
-  Future<Partner?> getPartner(int partnerId) =>
-      (select(partners)..where((t) => t.id.equals(partnerId)))
-          .getSingleOrNull();
+  Future<Partner?> getPartner(int partnerId) => (select(
+    partners,
+  )..where((t) => t.id.equals(partnerId))).getSingleOrNull();
 
   Future<int> countPartners(int userId) async {
     final q = selectOnly(partners)
@@ -358,14 +388,16 @@ class AppDatabase extends _$AppDatabase {
   }
 
   /// 無料/有料を踏まえた追加可否チェック
-  Future<bool> canAddPartner({required int userId, required bool isPaid}) async {
+  Future<bool> canAddPartner({
+    required int userId,
+    required bool isPaid,
+  }) async {
     if (isPaid) return true;
     final n = await countPartners(userId);
     return n < kFreeMaxPartners;
   }
 
-  Future<int> insertPartner(PartnersCompanion p) =>
-      into(partners).insert(p);
+  Future<int> insertPartner(PartnersCompanion p) => into(partners).insert(p);
 
   Future<void> deletePartner(int id) =>
       (delete(partners)..where((t) => t.id.equals(id))).go();
@@ -376,27 +408,61 @@ class AppDatabase extends _$AppDatabase {
     required int userId,
     required String localDate,
   }) async {
-    return (select(dailyReadingCaches)
-          ..where((t) =>
+    return (select(dailyReadingCaches)..where(
+          (t) =>
               t.userProfileId.equals(userId) &
               t.localDate.equals(localDate) &
               t.dictionaryVersion.equals(kDictionaryVersion) &
-              t.ephemerisVersion.equals(kEphemerisVersion)))
+              t.ephemerisVersion.equals(kEphemerisVersion),
+        ))
         .getSingleOrNull();
   }
 
   Future<void> saveDailyReading(DailyReadingCachesCompanion d) async {
-    await into(dailyReadingCaches)
-        .insert(d, mode: InsertMode.insertOrReplace);
+    await into(dailyReadingCaches).insert(d, mode: InsertMode.insertOrReplace);
   }
 
   /// 古い日次キャッシュの掃除（30日より前を削除）
   Future<void> pruneOldDailyReadings({int keepDays = 30}) async {
-    final cutoff =
-        DateTime.now().subtract(Duration(days: keepDays));
-    await (delete(dailyReadingCaches)
-          ..where((t) => t.generatedAt.isSmallerThanValue(cutoff)))
-        .go();
+    final cutoff = DateTime.now().subtract(Duration(days: keepDays));
+    await (delete(
+      dailyReadingCaches,
+    )..where((t) => t.generatedAt.isSmallerThanValue(cutoff))).go();
+  }
+
+  // --- AI diagnosis cache ---
+
+  Future<AiDiagnosisCache?> getAiDiagnosisCache({
+    required String type,
+    required String period,
+    required String payloadKey,
+  }) {
+    return (select(aiDiagnosisCaches)
+          ..where(
+            (t) =>
+                t.type.equals(type) &
+                t.period.equals(period) &
+                t.payloadKey.equals(payloadKey),
+          )
+          ..limit(1))
+        .getSingleOrNull();
+  }
+
+  Future<void> saveAiDiagnosisCache({
+    required String type,
+    required String period,
+    required String payloadKey,
+    required String resultJson,
+  }) {
+    return into(aiDiagnosisCaches).insert(
+      AiDiagnosisCachesCompanion(
+        type: Value(type),
+        period: Value(period),
+        payloadKey: Value(payloadKey),
+        resultJson: Value(resultJson),
+      ),
+      mode: InsertMode.insertOrReplace,
+    );
   }
 
   // --- Settings ---
@@ -405,15 +471,13 @@ class AppDatabase extends _$AppDatabase {
     final row = await (select(appSettings)..limit(1)).getSingleOrNull();
     if (row != null) return row;
     // 初期行を作る
-    await into(appSettings)
-        .insert(const AppSettingsCompanion(id: Value(1)));
+    await into(appSettings).insert(const AppSettingsCompanion(id: Value(1)));
     return (select(appSettings)..limit(1)).getSingle();
   }
 
   Future<void> updateSettings(AppSettingsCompanion patch) async {
     await getSettings();
-    await (update(appSettings)..where((t) => t.id.equals(1)))
-        .write(patch);
+    await (update(appSettings)..where((t) => t.id.equals(1))).write(patch);
   }
 }
 

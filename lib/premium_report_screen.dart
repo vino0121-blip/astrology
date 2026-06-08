@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -780,13 +781,58 @@ Future<_MonthlyReport?> _buildMonthlyReport(
       categories: _buildCategories(days),
       fallbackAiBlocks: _buildAiBlocks(chart, days, average, best, careful),
     );
-    final generated = await aiService.generateMonthly(base.toAiInput());
-    return base.withGenerated(generated);
+    final input = base.toAiInput();
+    final period = input.month;
+    final payloadKey = _aiCachePayloadKey(input.toJson(), user);
+    final cached = await svc.db.getAiDiagnosisCache(
+      type: 'monthly',
+      period: period,
+      payloadKey: payloadKey,
+    );
+
+    AiMonthlyDiagnosis? generated;
+    try {
+      generated = await aiService.generateMonthly(input);
+    } catch (error, stackTrace) {
+      debugPrint('Monthly AI generation request failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+
+    if (generated != null) {
+      await svc.db.saveAiDiagnosisCache(
+        type: 'monthly',
+        period: period,
+        payloadKey: payloadKey,
+        resultJson: jsonEncode(generated.toJson()),
+      );
+      return base.withGenerated(generated);
+    }
+    if (cached != null) {
+      return base.withGenerated(
+        AiMonthlyDiagnosis.fromJson(
+          jsonDecode(cached.resultJson) as Map<String, dynamic>,
+        ),
+      );
+    }
+    return base;
   } catch (error, stackTrace) {
     debugPrint('Monthly AI diagnosis failed: $error');
     debugPrintStack(stackTrace: stackTrace);
     rethrow;
   }
+}
+
+String _aiCachePayloadKey(Map<String, dynamic> payload, dynamic user) {
+  return jsonEncode({
+    'birthUtc': user.birthUtc.toIso8601String(),
+    'birthLocalIso': user.birthLocalIso,
+    'birthTimeUnknown': user.birthTimeUnknown,
+    'birthPlaceName': user.birthPlaceName,
+    'latitude': user.latitude,
+    'longitudeEast': user.longitudeEast,
+    'timezoneOffsetMinutes': user.timezoneOffsetMinutes,
+    'payload': payload,
+  });
 }
 
 List<_WeekReport> _buildWeeks(List<_DayReport> days) {
