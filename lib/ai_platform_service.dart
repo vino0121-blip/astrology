@@ -42,14 +42,16 @@ class AiPlatformService {
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
       );
-      await FirebaseAppCheck.instance.activate(
-        providerAndroid: useDebugAppCheck
-            ? const AndroidDebugProvider()
-            : const AndroidPlayIntegrityProvider(),
-        providerApple: useDebugAppCheck
-            ? const AppleDebugProvider()
-            : const AppleAppAttestWithDeviceCheckFallbackProvider(),
-      );
+      if (!skipAiAppCheck) {
+        await FirebaseAppCheck.instance.activate(
+          providerAndroid: useDebugAppCheck
+              ? const AndroidDebugProvider()
+              : const AndroidPlayIntegrityProvider(),
+          providerApple: useDebugAppCheck
+              ? const AppleDebugProvider()
+              : const AppleAppAttestWithDeviceCheckFallbackProvider(),
+        );
+      }
 
       final auth = FirebaseAuth.instance;
       final user = auth.currentUser ?? (await auth.signInAnonymously()).user;
