@@ -10,6 +10,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'app_database.dart' show UserProfile;
 import 'chart_reveal_screen.dart';
 import 'home_screen.dart';
 import 'jp_locations.dart';
@@ -30,9 +31,54 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   JpPrefecture? _prefecture;
 
   bool _saving = false;
+  bool _editingExisting = false;
   String? _dateError;
   String? _placeError;
   String? _formError;
+
+  @override
+  void initState() {
+    super.initState();
+    Future<void>.microtask(_loadExistingBirthData);
+  }
+
+  Future<void> _loadExistingBirthData() async {
+    final user = await ref.read(astroServiceProvider).currentUser();
+    if (!mounted || user == null) return;
+    _applyUserProfile(user);
+  }
+
+  void _applyUserProfile(UserProfile user) {
+    final birthLocal = DateTime.tryParse(user.birthLocalIso);
+    setState(() {
+      _editingExisting = true;
+      _nameController.text = user.displayName ?? '';
+      if (birthLocal != null) {
+        _birthDate = DateTime(
+          birthLocal.year,
+          birthLocal.month,
+          birthLocal.day,
+        );
+        _birthTime = user.birthTimeUnknown
+            ? null
+            : TimeOfDay(hour: birthLocal.hour, minute: birthLocal.minute);
+      }
+      _timeUnknown = user.birthTimeUnknown;
+      _prefecture = _prefectureFor(user);
+    });
+  }
+
+  JpPrefecture? _prefectureFor(UserProfile user) {
+    for (final p in kJpPrefectures) {
+      if (p.name == user.birthPlaceName) return p;
+    }
+    for (final p in kJpPrefectures) {
+      final sameLat = (p.lat - user.latitude).abs() < 0.01;
+      final sameLon = (p.lon - user.longitudeEast).abs() < 0.01;
+      if (sameLat && sameLon) return p;
+    }
+    return null;
+  }
 
   @override
   void dispose() {
@@ -136,9 +182,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       }
     } catch (e) {
       if (mounted) {
-        setState(
-          () => _formError = '保存できませんでした。もう一度お試しください。',
-        );
+        setState(() => _formError = '保存できませんでした。もう一度お試しください。');
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -193,9 +237,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 label: _timeUnknown
                     ? 'わからない（12:00で計算します）'
                     : _birthTime == null
-                        ? 'タップして選択（任意）'
-                        : '${_birthTime!.hour.toString().padLeft(2, "0")}:'
-                            '${_birthTime!.minute.toString().padLeft(2, "0")}',
+                    ? 'タップして選択（任意）'
+                    : '${_birthTime!.hour.toString().padLeft(2, "0")}:'
+                          '${_birthTime!.minute.toString().padLeft(2, "0")}',
                 onTap: _timeUnknown ? null : _pickTime,
                 placeholder: _birthTime == null && !_timeUnknown,
               ),
@@ -252,6 +296,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 const SizedBox(height: 12),
               ],
 
+              if (_editingExisting) ...[
+                _AiRegenerationNotice(scheme: scheme),
+                const SizedBox(height: 16),
+              ],
+
               FilledButton(
                 onPressed: _saving ? null : _submit,
                 style: FilledButton.styleFrom(
@@ -294,6 +343,40 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 }
 
+class _AiRegenerationNotice extends StatelessWidget {
+  final ColorScheme scheme;
+  const _AiRegenerationNotice({required this.scheme});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      decoration: BoxDecoration(
+        color: scheme.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: scheme.primary.withValues(alpha: 0.28)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.auto_awesome, size: 18, color: scheme.primary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              '出生情報を編集した場合、今日のAI診断は当日1回まで再生成できます。さらに変更した内容は翌日から反映されます。',
+              style: TextStyle(
+                fontSize: 12.5,
+                height: 1.55,
+                color: scheme.onSurface.withValues(alpha: 0.72),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _SectionLabel extends StatelessWidget {
   final String text;
   const _SectionLabel(this.text);
@@ -306,7 +389,9 @@ class _SectionLabel extends StatelessWidget {
         style: TextStyle(
           fontSize: 13.5,
           fontWeight: FontWeight.w600,
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.75),
+          color: Theme.of(
+            context,
+          ).colorScheme.onSurface.withValues(alpha: 0.75),
         ),
       ),
     );
@@ -340,8 +425,7 @@ class _PickerTile extends StatelessWidget {
             onTap: onTap,
             borderRadius: BorderRadius.circular(12),
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
@@ -352,9 +436,11 @@ class _PickerTile extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  Icon(icon,
-                      size: 20,
-                      color: scheme.onSurface.withValues(alpha: 0.6)),
+                  Icon(
+                    icon,
+                    size: 20,
+                    color: scheme.onSurface.withValues(alpha: 0.6),
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
