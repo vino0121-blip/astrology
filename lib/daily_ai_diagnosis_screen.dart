@@ -244,7 +244,7 @@ class _DailyAiView extends StatelessWidget {
         if (report.generated == null) ...[
           const SizedBox(height: 8),
           Text(
-            '今日のAI診断は1日1回です。出生情報を直した場合のみ、その日に1回だけ再生成できます。さらに変更した内容は翌日から反映されます。',
+            '出生情報を編集した場合、今日のAI診断は当日1回まで再生成できます。2回目以降の変更は翌日から反映されます。',
             style: TextStyle(
               fontSize: 11.5,
               height: 1.5,

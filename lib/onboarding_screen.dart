@@ -363,7 +363,7 @@ class _AiRegenerationNotice extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              '出生情報を編集した場合、今日のAI診断は当日1回まで再生成できます。さらに変更した内容は翌日から反映されます。',
+              '出生情報を編集した場合、今日のAI診断は当日1回まで再生成できます。2回目以降の変更は翌日から反映されます。',
               style: TextStyle(
                 fontSize: 12.5,
                 height: 1.55,
