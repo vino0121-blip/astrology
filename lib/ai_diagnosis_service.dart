@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
+
 import 'ai_platform_service.dart';
 
 class AiDiagnosisService {
@@ -60,10 +62,17 @@ class AiDiagnosisService {
         const Duration(seconds: 25),
       );
       final responseBody = await utf8.decoder.bind(response).join();
-      if (response.statusCode < 200 || response.statusCode >= 300) return null;
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        debugPrint(
+          'AI diagnosis request failed: ${response.statusCode} $responseBody',
+        );
+        return null;
+      }
       final decoded = jsonDecode(responseBody);
       return decoded is Map<String, dynamic> ? decoded : null;
-    } on Object {
+    } on Object catch (error, stackTrace) {
+      debugPrint('AI diagnosis request error: $error');
+      debugPrintStack(stackTrace: stackTrace);
       return null;
     } finally {
       client.close(force: true);
