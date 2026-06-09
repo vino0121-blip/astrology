@@ -19,7 +19,10 @@ const openAiModel = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const promptVersion = process.env.PROMPT_VERSION || "2026-06-08.2";
 const requireAppCheck = process.env.REQUIRE_APP_CHECK !== "false";
 const allowTestPremium = process.env.ALLOW_TEST_PREMIUM === "true";
-const dailyLimit = Number(process.env.MAX_DAILY_GENERATIONS || 2);
+const dailyRegenerationLimit = Number(
+  process.env.MAX_DAILY_REGENERATIONS_AFTER_PROFILE_CHANGE || 1,
+);
+const dailyLimit = 1 + dailyRegenerationLimit;
 const monthlyLimit = Number(process.env.MAX_MONTHLY_GENERATIONS_PER_DAY || 3);
 const revenueCatEntitlement =
   process.env.REVENUECAT_ENTITLEMENT_ID || "premium";
@@ -182,7 +185,7 @@ async function generateDiagnosis(type, uid, payload) {
     `${uid}|${type}|${period}|${promptVersion}|${payloadHash}`,
   );
   const cacheRef = db.collection("aiDiagnosisCache").doc(cacheId);
-  const usageDate = new Date().toISOString().slice(0, 10);
+  const usageDate = dateKeyInTimeZone(new Date(), "Asia/Tokyo");
   const usageRef = db.collection("aiUsage").doc(`${uid}_${usageDate}`);
   const limit = type === "daily" ? dailyLimit : monthlyLimit;
 
@@ -271,6 +274,21 @@ async function generateDiagnosis(type, uid, payload) {
     ]);
     throw error;
   }
+}
+
+function dateKeyInTimeZone(date, timeZone) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const values = Object.fromEntries(
+    parts
+      .filter(({ type }) => type !== "literal")
+      .map(({ type, value }) => [type, value]),
+  );
+  return `${values.year}-${values.month}-${values.day}`;
 }
 
 async function callOpenAi(type, payload) {

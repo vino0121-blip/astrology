@@ -77,11 +77,15 @@ gcloud run deploy hoshimeguri-ai `
   --region asia-northeast1 `
   --allow-unauthenticated `
   --set-secrets OPENAI_API_KEY=openai-api-key:latest,REVENUECAT_SECRET_API_KEY=revenuecat-secret-api-key:latest `
-  --set-env-vars OPENAI_MODEL=gpt-5.4-mini,REVENUECAT_ENTITLEMENT_ID=premium,REQUIRE_APP_CHECK=true,ALLOW_TEST_PREMIUM=false,MAX_DAILY_GENERATIONS=1,MAX_MONTHLY_GENERATIONS_PER_DAY=3
+  --set-env-vars OPENAI_MODEL=gpt-5.4-mini,REVENUECAT_ENTITLEMENT_ID=premium,REQUIRE_APP_CHECK=true,ALLOW_TEST_PREMIUM=false,MAX_DAILY_REGENERATIONS_AFTER_PROFILE_CHANGE=1,MAX_MONTHLY_GENERATIONS_PER_DAY=3
 ```
 
 Cloud Run自体は公開URLですが、各診断リクエストはFirebase ID token、App Check、
 RevenueCat entitlementの3段階で拒否されます。
+
+日次AI診断は日本時間0時に回数をリセットします。通常生成1回に加えて、
+出生情報を変更した後の再生成を
+`MAX_DAILY_REGENERATIONS_AFTER_PROFILE_CHANGE` 回まで許可します。
 
 Cloud Runの実行サービスアカウントには、最低限以下を付与します。
 
