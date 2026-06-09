@@ -119,6 +119,7 @@ class AiPlanLine {
 
 class AiDailyInput {
   final String date;
+  final String profileKey;
   final int score;
   final String monthlyRank;
   final String tone;
@@ -131,6 +132,7 @@ class AiDailyInput {
 
   const AiDailyInput({
     required this.date,
+    required this.profileKey,
     required this.score,
     required this.monthlyRank,
     required this.tone,
@@ -144,6 +146,7 @@ class AiDailyInput {
 
   Map<String, dynamic> toJson() => {
     'date': date,
+    'profile_key': profileKey,
     'score': score,
     'monthly_rank': monthlyRank,
     'tone': tone,

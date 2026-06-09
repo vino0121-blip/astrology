@@ -519,7 +519,7 @@ Future<_DailyAiReport?> _buildDailyAiReport(
       rank: rank,
       roastLevel: level,
     );
-    final input = base.toAiInput();
+    final input = base.toAiInput(profileKey: _aiProfileKey(user));
     final period = input.date;
     final payloadKey = _aiCachePayloadKey(input.toJson(), user);
     final cached = await svc.db.getAiDiagnosisCache(
@@ -571,6 +571,24 @@ String _aiCachePayloadKey(Map<String, dynamic> payload, dynamic user) {
     'timezoneOffsetMinutes': user.timezoneOffsetMinutes,
     'payload': payload,
   });
+}
+
+String _aiProfileKey(dynamic user) {
+  final source = jsonEncode({
+    'birthUtc': user.birthUtc.toIso8601String(),
+    'birthLocalIso': user.birthLocalIso,
+    'birthTimeUnknown': user.birthTimeUnknown,
+    'birthPlaceName': user.birthPlaceName,
+    'latitude': user.latitude,
+    'longitudeEast': user.longitudeEast,
+    'timezoneOffsetMinutes': user.timezoneOffsetMinutes,
+  });
+  var value = 0xcbf29ce484222325;
+  for (final byte in utf8.encode(source)) {
+    value ^= byte;
+    value = (value * 0x100000001b3) & 0xffffffffffffffff;
+  }
+  return value.toRadixString(16).padLeft(16, '0');
 }
 
 String _dailyAspectAdvice(Aspect aspect) {
@@ -765,13 +783,14 @@ class _DailyAiReport {
     return [...base, aspectAction];
   }
 
-  AiDailyInput toAiInput() {
+  AiDailyInput toAiInput({required String profileKey}) {
     final aspect = heroAspect;
     return AiDailyInput(
       date:
           '${date.year.toString().padLeft(4, '0')}-'
           '${date.month.toString().padLeft(2, '0')}-'
           '${date.day.toString().padLeft(2, '0')}',
+      profileKey: profileKey,
       score: (reading.overallScore * 100).round(),
       monthlyRank: rankLabel,
       tone: modeLabel,

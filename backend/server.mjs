@@ -202,8 +202,24 @@ async function generateDiagnosis(type, uid, payload) {
     }
 
     const usageSnap = await transaction.get(usageRef);
-    const current = Number(usageSnap.data()?.[type] || 0);
-    if (current >= limit) throw httpError(429, "generation_limit_reached");
+    const usage = usageSnap.data() || {};
+    const current = Number(usage[type] || 0);
+    if (type === "daily") {
+      const generatedProfiles = Array.isArray(usage.dailyProfileKeys)
+        ? usage.dailyProfileKeys
+        : [];
+      const cannotRegenerate =
+        current >= limit ||
+        (current > 0 && generatedProfiles.includes(payload.profile_key));
+      if (cannotRegenerate && usage.dailyLastResult) {
+        return { cached: true, result: usage.dailyLastResult };
+      }
+      if (cannotRegenerate) {
+        throw httpError(429, "generation_limit_reached");
+      }
+    } else if (current >= limit) {
+      throw httpError(429, "generation_limit_reached");
+    }
 
     transaction.set(
       usageRef,
@@ -211,6 +227,9 @@ async function generateDiagnosis(type, uid, payload) {
         uid,
         date: usageDate,
         [type]: current + 1,
+        ...(type === "daily"
+          ? { dailyProfileKeys: FieldValue.arrayUnion(payload.profile_key) }
+          : {}),
         updatedAt: FieldValue.serverTimestamp(),
       },
       { merge: true },
@@ -249,6 +268,16 @@ async function generateDiagnosis(type, uid, payload) {
       },
       { merge: true },
     );
+    if (type === "daily") {
+      await usageRef.set(
+        {
+          dailyLastResult: result,
+          dailyLastProfileKey: payload.profile_key,
+          updatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+    }
     return {
       result,
       cached: false,
@@ -267,6 +296,11 @@ async function generateDiagnosis(type, uid, payload) {
       usageRef.set(
         {
           [type]: FieldValue.increment(-1),
+          ...(type === "daily"
+            ? {
+                dailyProfileKeys: FieldValue.arrayRemove(payload.profile_key),
+              }
+            : {}),
           updatedAt: FieldValue.serverTimestamp(),
         },
         { merge: true },
@@ -386,6 +420,7 @@ function validatePayload(type, payload) {
   }
   if (type === "daily") {
     assertString(payload.date, 10, 10);
+    assertString(payload.profile_key, 16, 16);
     assertInteger(payload.score, 0, 100);
     assertString(payload.monthly_rank, 1, 20);
     assertString(payload.tone, 1, 20);
