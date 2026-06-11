@@ -28,7 +28,7 @@ const _kUrlPrivacy =
     'https://vino0121-blip.github.io/astrology/legal/privacy_policy';
 const _kUrlSubscription =
     'https://vino0121-blip.github.io/astrology/legal/subscription_terms';
-const _kUrlContact = 'mailto:studioalveare.app@gmail.com';
+const _kUrlContact = 'mailto:studioableare.app@gmail.com';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
