@@ -20,6 +20,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import 'app.dart';
+import 'ad_banner.dart';
 import 'app_database.dart';
 import 'ai_diagnosis_service.dart';
 import 'ai_platform_service.dart';
@@ -89,7 +90,9 @@ final isPaidProvider = FutureProvider<bool>((ref) async {
 // ============================================================
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await MobileAds.instance.initialize();
+  if (adsConfigured) {
+    await MobileAds.instance.initialize();
+  }
 
   // 1. SQLite 接続
   final docsDir = await getApplicationDocumentsDirectory();

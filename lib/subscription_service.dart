@@ -3,10 +3,11 @@
 // サブスクリプション状態の管理。AppSettings.subscriptionState を読み書きする
 // 薄いラッパ。
 //
-// RevenueCatの公開SDKキーが設定済みならストア課金を使い、未設定中だけ
-// 従来の開発用スタブでゲーティングのUXを確認できる。
+// RevenueCatの公開SDKキーが設定済みならストア課金を使う。
+// 開発用スタブはデバッグビルドでのみ利用できる。
 
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 
@@ -14,6 +15,13 @@ import 'ai_platform_service.dart';
 import 'app_database.dart';
 
 enum SubscriptionState { none, active, trial, expired }
+
+const bool _allowDevSubscriptionStub = bool.fromEnvironment(
+  'ALLOW_DEV_SUBSCRIPTION_STUB',
+  defaultValue: true,
+);
+
+bool get devSubscriptionStubEnabled => kDebugMode && _allowDevSubscriptionStub;
 
 enum SubscriptionPlan {
   monthly('monthly', '月額プラン', 550),
@@ -78,7 +86,9 @@ class SubscriptionService {
       }
     }
 
-    // ストア未設定中は従来の開発用スタブを維持する。
+    if (!devSubscriptionStubEnabled) return false;
+
+    // デバッグビルドで明示的に許可した場合だけ開発用スタブを使う。
     await db.updateSettings(
       AppSettingsCompanion(
         subscriptionState: const Value('active'),
@@ -98,10 +108,9 @@ class SubscriptionService {
     return (await currentState()) == SubscriptionState.active;
   }
 
-  /// PHASE 1 限定：ゲーティング再検証のための無料に戻すボタン用。
-  /// PHASE 2 で削除（本番では絶対に呼ばれてはいけない）。
+  /// デバッグ時のゲーティング再検証用。
   Future<void> devResetToFree() async {
-    if (platform.revenueCatConfigured) return;
+    if (platform.revenueCatConfigured || !devSubscriptionStubEnabled) return;
     await _storePaidState(false);
   }
 

@@ -10,7 +10,6 @@ import 'add_partner_screen.dart';
 import 'app_database.dart' show Partner;
 import 'aspect_mark.dart';
 import 'astro_display.dart';
-import 'astro_service.dart';
 import 'astro_synastry.dart';
 import 'main.dart'
     show astroServiceProvider, isPaidProvider, subscriptionServiceProvider;

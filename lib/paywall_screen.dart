@@ -5,15 +5,18 @@
 //   - プラン選択 → 「プレミアムに登録」CTA
 //   - 「購入を復元」リンク
 //   - 既加入時は「ストアで管理」表示
-//   - PHASE 1 限定で「Dev：無料に戻す」ボタン（再検証用）
+//   - デバッグ時のみ「Dev：無料に戻す」ボタン
 //
 // 成功時は Navigator.pop(context, true) で戻る。呼び出し側はその bool で
 // 「課金成功したから本来の動作（パートナー追加など）に進む」を判断する。
+
+import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'ad_banner.dart' show adsConfigured;
 import 'main.dart' show isPaidProvider, subscriptionServiceProvider;
 import 'subscription_service.dart';
 
@@ -96,6 +99,18 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     await _loadState();
   }
 
+  Future<void> _openSubscriptionManagement() async {
+    final uri = Uri.parse(
+      Platform.isIOS
+          ? 'https://apps.apple.com/account/subscriptions'
+          : 'https://play.google.com/store/account/subscriptions',
+    );
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && mounted) {
+      setState(() => _error = 'ストアの管理画面を開けませんでした。');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final paid =
@@ -153,8 +168,11 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
         const SizedBox(height: 12),
         const _BenefitRow(icon: Icons.favorite_border, text: '相性診断の人数制限なし'),
         const SizedBox(height: 12),
-        const _BenefitRow(icon: Icons.block, text: '広告非表示'),
-        const SizedBox(height: 28),
+        if (adsConfigured) ...[
+          const _BenefitRow(icon: Icons.block, text: '広告非表示'),
+          const SizedBox(height: 28),
+        ] else
+          const SizedBox(height: 16),
 
         _PlanCard(
           plan: SubscriptionPlan.monthly,
@@ -281,29 +299,24 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
         ),
         const SizedBox(height: 12),
         OutlinedButton(
-          onPressed: () {
-            // PHASE 2: ストアの管理画面に飛ばす（url_launcher で
-            //   iOS: https://apps.apple.com/account/subscriptions
-            //   Android: https://play.google.com/store/account/subscriptions
-            // を開く）
-          },
+          onPressed: _openSubscriptionManagement,
           child: const Text('プランを管理（ストア）'),
         ),
-        const SizedBox(height: 40),
-
-        // PHASE 1 限定：ゲーティング再検証用。PHASE 2 で削除すること。
-        Center(
-          child: TextButton(
-            onPressed: _devResetToFree,
-            child: Text(
-              'Dev：無料に戻す',
-              style: TextStyle(
-                fontSize: 11,
-                color: scheme.onSurface.withValues(alpha: 0.4),
+        if (devSubscriptionStubEnabled) ...[
+          const SizedBox(height: 40),
+          Center(
+            child: TextButton(
+              onPressed: _devResetToFree,
+              child: Text(
+                'Dev：無料に戻す',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: scheme.onSurface.withValues(alpha: 0.4),
+                ),
               ),
             ),
           ),
-        ),
+        ],
       ],
     );
   }

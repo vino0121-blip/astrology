@@ -62,6 +62,7 @@ workflows:
           grep -q "com.apple.developer.devicecheck.appattest-environment" ios/Runner/Runner.entitlements
           test "$(grep -c 'IPHONEOS_DEPLOYMENT_TARGET = 15.0' ios/Runner.xcodeproj/project.pbxproj)" -eq 3
           test -n "$AI_API_BASE_URL"
+          test -n "$REVENUECAT_IOS_API_KEY"
       - name: Build signed IPA
         script: |
           flutter build ipa --release \
