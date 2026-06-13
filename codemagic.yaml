@@ -21,12 +21,11 @@ workflows:
           test -f ios/Runner/Runner.entitlements
           grep -q "com.studioalveare.hoshimeguri" ios/Runner.xcodeproj/project.pbxproj
           test "$(grep -c 'IPHONEOS_DEPLOYMENT_TARGET = 15.0' ios/Runner.xcodeproj/project.pbxproj)" -eq 3
-          test -n "$AI_API_BASE_URL"
       - name: Build unsigned iOS app
         script: |
           flutter build ios --release --no-codesign \
             --build-number=$PROJECT_BUILD_NUMBER \
-            --dart-define=AI_API_BASE_URL="${AI_API_BASE_URL:-}" \
+            --dart-define=AI_API_BASE_URL="${AI_API_BASE_URL:-https://hoshimeguri-ai-dq7msgoy4q-an.a.run.app}" \
             --dart-define=REVENUECAT_IOS_API_KEY="${REVENUECAT_IOS_API_KEY:-}"
     artifacts:
       - build/ios/iphoneos/Runner.app
@@ -57,18 +56,34 @@ workflows:
         script: flutter pub get
       - name: Verify iOS configuration
         script: |
-          test -f ios/Runner/GoogleService-Info.plist
-          test -f ios/Runner/Runner.entitlements
-          grep -q "com.apple.developer.devicecheck.appattest-environment" ios/Runner/Runner.entitlements
-          test "$(grep -c 'IPHONEOS_DEPLOYMENT_TARGET = 15.0' ios/Runner.xcodeproj/project.pbxproj)" -eq 3
-          test -n "$AI_API_BASE_URL"
-          test -n "$REVENUECAT_IOS_API_KEY"
+          set -e
+          test -f ios/Runner/GoogleService-Info.plist || { echo "Missing GoogleService-Info.plist"; exit 1; }
+          test -f ios/Runner/Runner.entitlements || { echo "Missing Runner.entitlements"; exit 1; }
+          grep -q "com.apple.developer.devicecheck.appattest-environment" ios/Runner/Runner.entitlements || {
+            echo "Missing App Attest entitlement"
+            exit 1
+          }
+          test "$(grep -c 'IPHONEOS_DEPLOYMENT_TARGET = 15.0' ios/Runner.xcodeproj/project.pbxproj)" -eq 3 || {
+            echo "iOS deployment target is not consistently set to 15.0"
+            exit 1
+          }
+          test -n "${REVENUECAT_IOS_API_KEY:-}" || {
+            echo "Missing REVENUECAT_IOS_API_KEY in the app_runtime environment group"
+            exit 1
+          }
+          case "$REVENUECAT_IOS_API_KEY" in
+            appl_*) ;;
+            *)
+              echo "REVENUECAT_IOS_API_KEY must be the RevenueCat public Apple SDK key beginning with appl_"
+              exit 1
+              ;;
+          esac
       - name: Build signed IPA
         script: |
           flutter build ipa --release \
             --build-number=$PROJECT_BUILD_NUMBER \
             --export-options-plist=/Users/builder/export_options.plist \
-            --dart-define=AI_API_BASE_URL="${AI_API_BASE_URL:-}" \
+            --dart-define=AI_API_BASE_URL="${AI_API_BASE_URL:-https://hoshimeguri-ai-dq7msgoy4q-an.a.run.app}" \
             --dart-define=REVENUECAT_IOS_API_KEY="${REVENUECAT_IOS_API_KEY:-}"
     artifacts:
       - build/ios/ipa/*.ipa
