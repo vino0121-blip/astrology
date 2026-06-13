@@ -98,6 +98,10 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
       } else {
         setState(() => _error = '復元できる購入が見つかりませんでした。');
       }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _error = '購入情報の復元中にエラーが発生しました。時間をおいて再度お試しください。');
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
