@@ -8,14 +8,17 @@ import 'package:purchases_flutter/purchases_flutter.dart';
 
 import 'firebase_options.dart';
 
-const aiApiBaseUrl = String.fromEnvironment('AI_API_BASE_URL');
+const aiApiBaseUrl = String.fromEnvironment(
+  'AI_API_BASE_URL',
+  defaultValue: 'https://hoshimeguri-ai-dq7msgoy4q-an.a.run.app',
+);
 const revenueCatAndroidApiKey = String.fromEnvironment(
   'REVENUECAT_ANDROID_API_KEY',
 );
 const revenueCatIosApiKey = String.fromEnvironment('REVENUECAT_IOS_API_KEY');
 const useDebugAppCheck = bool.fromEnvironment(
   'USE_DEBUG_APP_CHECK',
-  defaultValue: false,
+  defaultValue: kDebugMode,
 );
 const skipAiAppCheck = bool.fromEnvironment(
   'SKIP_AI_APP_CHECK',
