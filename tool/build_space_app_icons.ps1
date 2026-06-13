@@ -14,6 +14,7 @@ $iosMaster = Join-Path $assetRoot 'app-icon-ios-1024.png'
 $playStore = Join-Path $assetRoot 'play-store-icon-512.png'
 $adaptiveForeground = Join-Path $assetRoot 'android-adaptive-foreground-512.png'
 $adaptiveBackground = Join-Path $assetRoot 'android-adaptive-background-512.png'
+$foregroundOffsetY = 12
 
 function New-SquareBitmap([int]$size) {
     return New-Object System.Drawing.Bitmap $size, $size, ([System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
@@ -131,6 +132,23 @@ function Composite(
     return $output
 }
 
+function Shift-Foreground(
+    [System.Drawing.Bitmap]$source,
+    [int]$offsetX,
+    [int]$offsetY
+) {
+    $output = New-SquareBitmap $source.Width
+    $graphics = [System.Drawing.Graphics]::FromImage($output)
+    try {
+        $graphics.Clear([System.Drawing.Color]::Transparent)
+        $graphics.CompositingMode = [System.Drawing.Drawing2D.CompositingMode]::SourceOver
+        $graphics.DrawImageUnscaled($source, $offsetX, $offsetY)
+    } finally {
+        $graphics.Dispose()
+    }
+    return $output
+}
+
 function Save-AdaptiveForeground(
     [System.Drawing.Bitmap]$source,
     [string]$path
@@ -166,25 +184,30 @@ try {
     try {
         $foreground1024 = Extract-Foreground $logo1024
         try {
-            $composite1024 = Composite $space1024 $foreground1024
+            $centeredForeground1024 = Shift-Foreground $foreground1024 0 $foregroundOffsetY
             try {
-                $foreground1024.Save($transparentMaster, [System.Drawing.Imaging.ImageFormat]::Png)
-                $space1024.Save($spaceMaster, [System.Drawing.Imaging.ImageFormat]::Png)
-                $composite1024.Save($iosMaster, [System.Drawing.Imaging.ImageFormat]::Png)
-
-                $composite512 = Resize-ToSquare $composite1024 512 $false
-                $space512 = Resize-ToSquare $space1024 512 $false
+                $composite1024 = Composite $space1024 $centeredForeground1024
                 try {
-                    $composite512.Save($playStore, [System.Drawing.Imaging.ImageFormat]::Png)
-                    $space512.Save($adaptiveBackground, [System.Drawing.Imaging.ImageFormat]::Png)
-                } finally {
-                    $composite512.Dispose()
-                    $space512.Dispose()
-                }
+                    $centeredForeground1024.Save($transparentMaster, [System.Drawing.Imaging.ImageFormat]::Png)
+                    $space1024.Save($spaceMaster, [System.Drawing.Imaging.ImageFormat]::Png)
+                    $composite1024.Save($iosMaster, [System.Drawing.Imaging.ImageFormat]::Png)
 
-                Save-AdaptiveForeground $foreground1024 $adaptiveForeground
+                    $composite512 = Resize-ToSquare $composite1024 512 $false
+                    $space512 = Resize-ToSquare $space1024 512 $false
+                    try {
+                        $composite512.Save($playStore, [System.Drawing.Imaging.ImageFormat]::Png)
+                        $space512.Save($adaptiveBackground, [System.Drawing.Imaging.ImageFormat]::Png)
+                    } finally {
+                        $composite512.Dispose()
+                        $space512.Dispose()
+                    }
+
+                    Save-AdaptiveForeground $centeredForeground1024 $adaptiveForeground
+                } finally {
+                    $composite1024.Dispose()
+                }
             } finally {
-                $composite1024.Dispose()
+                $centeredForeground1024.Dispose()
             }
         } finally {
             $foreground1024.Dispose()
