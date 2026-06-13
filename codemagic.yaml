@@ -67,6 +67,10 @@ workflows:
             echo "iOS deployment target is not consistently set to 15.0"
             exit 1
           }
+          test "$(grep -c 'TARGETED_DEVICE_FAMILY = 1;' ios/Runner.xcodeproj/project.pbxproj)" -eq 3 || {
+            echo "iOS target must be configured for iPhone only"
+            exit 1
+          }
           test -n "${REVENUECAT_IOS_API_KEY:-}" || {
             echo "Missing REVENUECAT_IOS_API_KEY in the app_runtime environment group"
             exit 1
