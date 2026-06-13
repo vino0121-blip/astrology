@@ -61,6 +61,22 @@ class SubscriptionService {
     return s == SubscriptionState.active || s == SubscriptionState.trial;
   }
 
+  Future<Map<SubscriptionPlan, String>> priceLabels() async {
+    if (!platform.revenueCatConfigured) return const {};
+    try {
+      final current = (await Purchases.getOfferings()).current;
+      if (current == null) return const {};
+      return {
+        if (current.monthly != null)
+          SubscriptionPlan.monthly: current.monthly!.storeProduct.priceString,
+        if (current.annual != null)
+          SubscriptionPlan.yearly: current.annual!.storeProduct.priceString,
+      };
+    } on Object {
+      return const {};
+    }
+  }
+
   Future<bool> purchase(SubscriptionPlan plan) async {
     if (platform.revenueCatConfigured) {
       final offerings = await Purchases.getOfferings();

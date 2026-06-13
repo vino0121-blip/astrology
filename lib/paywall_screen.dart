@@ -37,6 +37,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
   bool _busy = false;
   String? _error;
   SubscriptionState _state = SubscriptionState.none;
+  Map<SubscriptionPlan, String> _priceLabels = const {};
 
   @override
   void initState() {
@@ -45,9 +46,19 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
   }
 
   Future<void> _loadState() async {
-    final s = await ref.read(subscriptionServiceProvider).currentState();
+    final service = ref.read(subscriptionServiceProvider);
+    final s = await service.currentState();
+    final prices = await service.priceLabels();
     if (!mounted) return;
-    setState(() => _state = s);
+    setState(() {
+      _state = s;
+      _priceLabels = prices;
+      if (!devSubscriptionStubEnabled &&
+          (!service.platform.revenueCatConfigured ||
+              prices.length < SubscriptionPlan.values.length)) {
+        _error = '購入情報を読み込めませんでした。通信環境を確認して、もう一度開いてください。';
+      }
+    });
   }
 
   Future<void> _onPurchase() async {
@@ -131,6 +142,9 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
   // --------------------------------------------------
   Widget _buildPaywallView() {
     final scheme = Theme.of(context).colorScheme;
+    final purchaseReady =
+        devSubscriptionStubEnabled ||
+        _priceLabels.length == SubscriptionPlan.values.length;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -176,15 +190,17 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
 
         _PlanCard(
           plan: SubscriptionPlan.monthly,
+          priceLabel: _priceLabels[SubscriptionPlan.monthly],
           selected: _selected == SubscriptionPlan.monthly,
           onTap: () => setState(() => _selected = SubscriptionPlan.monthly),
         ),
         const SizedBox(height: 10),
         _PlanCard(
           plan: SubscriptionPlan.yearly,
+          priceLabel: _priceLabels[SubscriptionPlan.yearly],
           selected: _selected == SubscriptionPlan.yearly,
           badge: 'おすすめ',
-          subtitle: '約 ¥458/月（17% off）',
+          subtitle: '1年ごとに自動更新',
           onTap: () => setState(() => _selected = SubscriptionPlan.yearly),
         ),
         const SizedBox(height: 24),
@@ -199,7 +215,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
         ],
 
         FilledButton(
-          onPressed: _busy ? null : _onPurchase,
+          onPressed: _busy || !purchaseReady ? null : _onPurchase,
           style: FilledButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 16),
           ),
@@ -343,12 +359,14 @@ class _BenefitRow extends StatelessWidget {
 
 class _PlanCard extends StatelessWidget {
   final SubscriptionPlan plan;
+  final String? priceLabel;
   final bool selected;
   final String? badge;
   final String? subtitle;
   final VoidCallback onTap;
   const _PlanCard({
     required this.plan,
+    required this.priceLabel,
     required this.selected,
     required this.onTap,
     this.badge,
@@ -358,8 +376,10 @@ class _PlanCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final fallbackPrice =
+        '¥${plan.priceJpy.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
     final price =
-        '¥${plan.priceJpy.toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')} / ${plan == SubscriptionPlan.monthly ? '月' : '年'}';
+        '${priceLabel ?? (devSubscriptionStubEnabled ? fallbackPrice : '---')} / ${plan == SubscriptionPlan.monthly ? '月' : '年'}';
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
